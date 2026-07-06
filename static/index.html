@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pronunciation Coach</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #171a21;
+    --border: #262b36;
+    --text: #e8eaf0;
+    --muted: #8b93a7;
+    --accent: #6c8cff;
+    --good: #34d399;
+    --moderate: #fbbf24;
+    --poor: #f87171;
+    --filler: #a78bfa;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 48px 20px 80px;
+  }
+  header { text-align: center; margin-bottom: 36px; }
+  header h1 { font-size: 1.7rem; margin: 0 0 8px; letter-spacing: -0.02em; }
+  header p { color: var(--muted); margin: 0; font-size: 0.95rem; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+
+  .drop {
+    border: 1.5px dashed var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s;
+  }
+  .drop:hover, .drop.drag { border-color: var(--accent); }
+  .drop input { display: none; }
+  .drop-icon { font-size: 1.8rem; margin-bottom: 8px; }
+  .drop-text { color: var(--muted); font-size: 0.9rem; }
+  .drop-text strong { color: var(--text); }
+
+  audio { width: 100%; margin-top: 16px; }
+
+  .duration-note {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+  }
+  .duration-note.bad { color: var(--poor); }
+  .duration-note.ok { color: var(--good); }
+
+  button.primary {
+    width: 100%;
+    padding: 13px;
+    margin-top: 16px;
+    border: none;
+    border-radius: 10px;
+    background: var(--accent);
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .15s;
+  }
+  button.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary:not(:disabled):hover { opacity: 0.9; }
+
+  .score-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .score-circle {
+    width: 88px; height: 88px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; font-weight: 700;
+    border: 4px solid var(--accent);
+    flex-shrink: 0;
+  }
+  .score-meta { color: var(--muted); font-size: 0.88rem; line-height: 1.5; }
+  .score-meta b { color: var(--text); }
+
+  .transcript {
+    line-height: 2.1;
+    font-size: 1.05rem;
+    margin-top: 22px;
+  }
+  .w { padding: 2px 4px; border-radius: 5px; cursor: default; position: relative; }
+  .w.good { color: var(--text); }
+  .w.moderate { background: rgba(251,191,36,0.15); color: var(--moderate); border-bottom: 2px solid var(--moderate); }
+  .w.poor { background: rgba(248,113,113,0.15); color: var(--poor); border-bottom: 2px solid var(--poor); }
+  .w.filler { background: rgba(167,139,250,0.15); color: var(--filler); border-bottom: 2px dashed var(--filler); }
+
+  .w[data-reason]:hover::after {
+    content: attr(data-reason);
+    position: absolute;
+    bottom: 130%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #000;
+    color: #fff;
+    padding: 5px 9px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    white-space: nowrap;
+    z-index: 10;
+  }
+
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 18px; font-size: 0.8rem; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+  .error {
+    background: rgba(248,113,113,0.1);
+    border: 1px solid rgba(248,113,113,0.3);
+    color: var(--poor);
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    margin-top: 14px;
+  }
+  .loading { text-align: center; color: var(--muted); padding: 20px; font-size: 0.9rem; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🎙️ Pronunciation Coach</h1>
+    <p>Upload a 30-45 second English recording to get a pronunciation score</p>
+  </header>
+
+  <div class="card">
+    <label class="drop" id="dropZone">
+      <input type="file" id="fileInput" accept="audio/*" />
+      <div class="drop-icon">📤</div>
+      <div class="drop-text"><strong>Click to upload</strong> or drag an audio file here<br/>WAV, MP3, M4A, WEBM — 30 to 45 seconds</div>
+    </label>
+    <audio id="preview" class="hidden" controls></audio>
+    <div id="durationNote" class="duration-note hidden"></div>
+    <button class="primary" id="analyzeBtn" disabled>Analyze Pronunciation</button>
+  </div>
+
+  <div id="loading" class="loading hidden">Transcribing and scoring your speech…</div>
+  <div id="errorBox" class="error hidden"></div>
+
+  <div id="resultCard" class="card hidden">
+    <div class="score-row">
+      <div class="score-circle" id="scoreCircle">--</div>
+      <div class="score-meta">
+        <div><b id="wordStats"></b></div>
+        <div id="durationStat"></div>
+      </div>
+    </div>
+    <div class="transcript" id="transcript"></div>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--good)"></span>Clear</span>
+      <span><span class="dot" style="background:var(--moderate)"></span>Somewhat unclear</span>
+      <span><span class="dot" style="background:var(--poor)"></span>Likely mispronounced</span>
+      <span><span class="dot" style="background:var(--filler)"></span>Filler word</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const fileInput = document.getElementById('fileInput');
+const dropZone = document.getElementById('dropZone');
+const preview = document.getElementById('preview');
+const durationNote = document.getElementById('durationNote');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const loading = document.getElementById('loading');
+const errorBox = document.getElementById('errorBox');
+const resultCard = document.getElementById('resultCard');
+
+let selectedFile = null;
+let durationValid = false;
+
+const MIN_DUR = 30, MAX_DUR = 45;
+
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+['dragover', 'dragleave', 'drop'].forEach(evt => {
+  dropZone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropZone.classList.toggle('drag', evt === 'dragover');
+  });
+});
+dropZone.addEventListener('drop', (e) => {
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+function handleFile(file) {
+  selectedFile = file;
+  errorBox.classList.add('hidden');
+  resultCard.classList.add('hidden');
+
+  const url = URL.createObjectURL(file);
+  preview.src = url;
+  preview.classList.remove('hidden');
+
+  preview.onloadedmetadata = () => {
+    const dur = preview.duration;
+    durationNote.classList.remove('hidden');
+    if (dur >= MIN_DUR && dur <= MAX_DUR) {
+      durationNote.textContent = `Duration: ${dur.toFixed(1)}s ✓ within range`;
+      durationNote.className = 'duration-note ok';
+      durationValid = true;
+    } else {
+      durationNote.textContent = `Duration: ${dur.toFixed(1)}s — must be between ${MIN_DUR} and ${MAX_DUR} seconds`;
+      durationNote.className = 'duration-note bad';
+      durationValid = false;
+    }
+    analyzeBtn.disabled = !durationValid;
+  };
+}
+
+analyzeBtn.addEventListener('click', async () => {
+  if (!selectedFile) return;
+  errorBox.classList.add('hidden');
+  resultCard.classList.add('hidden');
+  loading.classList.remove('hidden');
+  analyzeBtn.disabled = true;
+
+  const formData = new FormData();
+  formData.append('file', selectedFile);
+
+  try {
+    const res = await fetch('/analyze', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.detail || 'Something went wrong.');
+    }
+
+    renderResult(data);
+  } catch (err) {
+    errorBox.textContent = err.message;
+    errorBox.classList.remove('hidden');
+  } finally {
+    loading.classList.add('hidden');
+    analyzeBtn.disabled = false;
+  }
+});
+
+function renderResult(data) {
+  const circle = document.getElementById('scoreCircle');
+  circle.textContent = Math.round(data.overall_score);
+  const score = data.overall_score;
+  circle.style.borderColor = score >= 85 ? 'var(--good)' : score >= 60 ? 'var(--moderate)' : 'var(--poor)';
+
+  document.getElementById('wordStats').textContent =
+    `${data.flagged_count} of ${data.total_words} words flagged`;
+  document.getElementById('durationStat').textContent =
+    `Recording length: ${data.duration_seconds}s`;
+
+  const transcriptEl = document.getElementById('transcript');
+  transcriptEl.innerHTML = '';
+  data.words.forEach(w => {
+    const span = document.createElement('span');
+    span.className = `w ${w.flag}`;
+    span.textContent = w.word + ' ';
+    if (w.reason) span.setAttribute('data-reason', w.reason);
+    transcriptEl.appendChild(span);
+  });
+
+  resultCard.classList.remove('hidden');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: pronunciation-coach
+    env: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: WHISPER_MODEL_SIZE
+        value: base.en
+      - key: WHISPER_COMPUTE_TYPE
+        value: int8
