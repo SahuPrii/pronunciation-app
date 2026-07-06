@@ -13,7 +13,7 @@ COPY main.py .
 COPY static ./static
 
 # Pre-download the whisper model at build time so cold-start requests are fast
-RUN python -c "from faster_whisper import WhisperModel; WhisperModel('base.en', device='cpu', compute_type='int8')"
+
 
 EXPOSE 8000
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
