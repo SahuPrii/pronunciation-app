@@ -15,7 +15,7 @@ Fully open-source, no paid APIs — uses [faster-whisper](https://github.com/SYS
 4. Each word is classified:
    - confidence ≥ 0.85 → **good** (clear)
    - 0.60 ≤ confidence < 0.85 → **moderate** (somewhat unclear)
-   - confidence < 0.60 → **poor** (likely mispronounced/unclear)
+   - confidence < 0.60 → *poor* (likely mispronounced/unclear)
    - filler words (um, uh, etc.) → flagged separately
 5. Overall score = average word confidence × 100.
 6. The temp audio file is deleted immediately after transcription — nothing
