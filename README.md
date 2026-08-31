@@ -43,7 +43,7 @@ Requires `ffmpeg` installed locally (`apt install ffmpeg` / `brew install ffmpeg
 4. Deploy — first build takes a few minutes (downloads the Whisper model at
    build time so it's baked into the image).
 
-## Project structure
+## Project structure.
 
 ```
 main.py           FastAPI backend (transcription + scoring)
